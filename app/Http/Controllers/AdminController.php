@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Attendance;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -13,7 +15,61 @@ class AdminController extends Controller
 {
     public function dashboard()
     {
-        return view('admin.dashboardAdmin');
+        $appTimezone = config('app.timezone');
+        $now = Carbon::now($appTimezone);
+        $today = $now->toDateString();
+        $startOfMonth = $now->copy()->startOfMonth()->toDateString();
+        $endOfMonth = $now->copy()->endOfMonth()->toDateString();
+
+        // 1. Total Karyawan (hanya role 'employee')
+        $totalKaryawan = User::where('role', User::ROLE_EMPLOYEE)->count();
+
+        // Data untuk hari ini
+        $attendancesToday = Attendance::with('user')
+                                ->where('date', $today)
+                                ->get();
+
+        // 2. Karyawan Tepat Waktu Hari Ini
+        // Asumsi: status 'hadir' dan keterangan BUKAN 'Terlambat'
+        $tepatWaktuHariIni = $attendancesToday->filter(function ($attendance) {
+            return $attendance->status === 'hadir' && $attendance->keterangan !== 'Terlambat';
+        })->count();
+
+        // 3. Karyawan Terlambat Hari Ini
+        // Asumsi: status 'hadir' dan keterangan 'Terlambat'
+        $terlambatHariIni = $attendancesToday->where('status', 'hadir')
+                                          ->where('keterangan', 'Terlambat')
+                                          ->count();
+
+        // 4. Total Karyawan Hadir (Presentasi) Hari Ini
+        $hadirHariIni = $attendancesToday->where('status', 'hadir')->count();
+
+
+        // Data untuk bulan ini
+        $attendancesThisMonth = Attendance::whereBetween('date', [$startOfMonth, $endOfMonth])
+                                    ->get();
+
+        // 5. Persentase Tepat Waktu Bulan Ini
+        $totalHadirBulanIni = $attendancesThisMonth->where('status', 'hadir')->count();
+        $totalTepatWaktuBulanIni = $attendancesThisMonth->filter(function ($attendance) {
+            return $attendance->status === 'hadir' && $attendance->keterangan !== 'Terlambat';
+        })->count();
+
+        $persentaseTepatWaktu = ($totalHadirBulanIni > 0) ? round(($totalTepatWaktuBulanIni / $totalHadirBulanIni) * 100, 2) : 0;
+
+        // 6. Jumlah Karyawan Cuti/Izin/Sakit Bulan Ini
+        // Kita gabungkan 'izin' dan 'sakit' sebagai "Tidak Masuk (Izin/Sakit)"
+        $tidakMasukDenganKeteranganBulanIni = $attendancesThisMonth->whereIn('status', ['izin', 'sakit'])->count();
+
+
+        return view('admin.dashboardAdmin', compact(
+            'totalKaryawan',
+            'persentaseTepatWaktu',
+            'tepatWaktuHariIni',
+            'terlambatHariIni',
+            'hadirHariIni', // Ini adalah "Presentasi Hari ini"
+            'tidakMasukDenganKeteranganBulanIni' // Ini adalah "Cuti Bulan ini"
+        ));
     }
 
     public function karyawan(Request $request) // Inject Request
@@ -116,14 +172,69 @@ class AdminController extends Controller
 
 
 
-    public function login()
-    {
-        return view('admin.loginAdmin');
-    }
+    // public function login()
+    // {
+    //     return view('admin.loginAdmin');
+    // }
 
-    public function rekapAbsensi()
+    public function rekapAbsensi(Request $request)
     {
-        return view('admin.rekapAbsensi');
+        $appTimezone = config('app.timezone');
+        $now = Carbon::now($appTimezone);
+
+        // Tentukan bulan dan tahun untuk filter
+        $selectedYear = $request->input('year', $now->year);
+        $selectedMonth = $request->input('month', $now->month);
+
+        try {
+            $currentFilterDate = Carbon::createFromDate($selectedYear, $selectedMonth, 1, $appTimezone);
+        } catch (\Exception $e) {
+            // Fallback jika input tidak valid, gunakan tanggal saat ini
+            $currentFilterDate = $now->copy();
+            $selectedYear = $now->year;
+            $selectedMonth = $now->month;
+        }
+
+        $startOfSelectedMonth = $currentFilterDate->copy()->startOfMonth();
+        $endOfSelectedMonth = $currentFilterDate->copy()->endOfMonth();
+
+        // Ambil semua data absensi untuk bulan dan tahun yang dipilih
+        // Sertakan data pengguna terkait untuk menampilkan nama dan NIP
+        $rekapAttendances = Attendance::with('user') // Eager load relasi user
+                                ->whereBetween('date', [$startOfSelectedMonth->toDateString(), $endOfSelectedMonth->toDateString()])
+                                ->orderBy('date', 'desc')
+                                ->orderBy('user_id', 'asc')
+                                ->orderBy('check_in', 'asc')
+                                ->paginate(20) // Sesuaikan jumlah item per halaman
+                                ->withQueryString(); // Agar parameter filter terbawa saat paginasi
+
+        // Menyiapkan data untuk dropdown filter
+        $yearsForFilter = [];
+        $currentYear = $now->year;
+        // Ambil 5 tahun ke belakang dan 1 tahun ke depan untuk opsi tahun
+        for ($year = $currentYear + 1; $year >= $currentYear - 5; $year--) {
+            $yearsForFilter[] = $year;
+        }
+
+        $monthsForFilter = [];
+        for ($month = 1; $month <= 12; $month++) {
+            $monthsForFilter[$month] = Carbon::create()->month($month)->locale('id')->getTranslatedMonthName();
+        }
+
+        // Jika tidak ada data absensi sama sekali untuk filter awal
+        if (Attendance::count() == 0 && !$request->has('month') && !$request->has('year')) {
+             $yearsForFilter = [$now->year];
+             $monthsForFilter = [$now->month => Carbon::create()->month($now->month)->locale('id')->getTranslatedMonthName()];
+        }
+
+
+        return view('admin.rekapAbsensi', compact( // Pastikan path view Anda benar
+            'rekapAttendances',
+            'yearsForFilter',
+            'monthsForFilter',
+            'selectedYear',
+            'selectedMonth'
+        ));
     }
 
     public function profilAdmin()

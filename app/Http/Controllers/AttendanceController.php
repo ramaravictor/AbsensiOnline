@@ -19,8 +19,8 @@ class AttendanceController extends Controller
             'latitude' => ['required', 'numeric'],
             'longitude' => ['required', 'numeric'],
             'accuracy' => ['nullable', 'numeric'],
-            'selected_option' => [
-                Rule::requiredIf(fn () => $request->input('jenis_absen') === 'hadir'),
+            'selected_option' => [ // Opsi yang dipilih di modal (Hadir, Sakit, Izin, Pulang Tepat Waktu)
+                Rule::requiredIf(fn () => $request->input('jenis_absen') === 'hadir' || $request->input('jenis_absen') === 'pulang'), // Wajib jika hadir atau pulang
                 'nullable',
                 'string',
                 Rule::in(['Hadir', 'Sakit', 'Izin', 'Pulang', 'Pulang Tepat Waktu']),
@@ -46,14 +46,17 @@ class AttendanceController extends Controller
         }
 
         $attendanceRecord = null;
+        $messageForAlert = "";
+        $statusDetailForDisplayPage = "";
+        $keteranganForDb = null; // Keterangan yang akan disimpan ke DB ('Terlambat', dll)
 
         if ($validatedData['jenis_absen'] === 'hadir') {
             $batasAwalAbsenHadir = $jadwalMulaiToday->copy()->subMinutes(15);
+            // Batas akhir pengguna BISA melakukan check-in hadir (meskipun akan ditandai sangat terlambat)
             $batasMaksimalCheckIn = $jadwalMulaiToday->copy()->addMinutes(60); // Contoh: Boleh absen hingga 60 menit terlambat
 
-            // Batas akhir untuk dianggap TIDAK TERLAMBAT (toleransi)
+            // Batas waktu untuk dianggap TIDAK TERLAMBAT (toleransi)
             $batasToleransiTidakTerlambat = $jadwalMulaiToday->copy()->addMinutes(15);
-
 
             $existingAttendance = Attendance::where('user_id', $user->id)
                                         ->whereDate('date', $today)
@@ -61,7 +64,7 @@ class AttendanceController extends Controller
                                         ->first();
 
             if ($existingAttendance) {
-                return response()->json(['error' => true, 'message' => 'Anda sudah melakukan absensi (hadir/sakit/izin) hari ini.'], 400);
+                return response()->json(['error' => true, 'message' => 'Anda sudah melakukan absensi (hadir/sakit/izin/alpha) hari ini.'], 400);
             }
 
             if ($now->isBefore($batasAwalAbsenHadir)) {
@@ -72,59 +75,49 @@ class AttendanceController extends Controller
                 return response()->json(['error' => true, 'message' => 'Batas waktu maksimal untuk absen hadir hari ini (pukul ' . $batasMaksimalCheckIn->format('H:i') . ') telah lewat.'], 400);
             }
 
-            $statusAbsen = strtolower($validatedData['selected_option']);
-            $keterangan = null;
-            $message = 'Absen ' . ucfirst($statusAbsen) . ' berhasil dicatat! Anda akan diarahkan...';
+            $statusInput = strtolower($validatedData['selected_option']); // 'hadir', 'sakit', atau 'izin'
 
             if (empty($validatedData['selected_option']) || !in_array($validatedData['selected_option'], ['Hadir', 'Sakit', 'Izin'])) {
                 return response()->json(['error' => true, 'message' => 'Silakan pilih status kehadiran (Hadir, Sakit, atau Izin).'], 422);
             }
 
-            if ($statusAbsen === 'hadir') {
-                // Jika waktu saat ini LEBIH DARI (>) batas toleransi 15 menit SETELAH jam mulai kerja
-                if ($now->isAfter($batasToleransiTidakTerlambat)) {
-                    $keterangan = 'Terlambat';
-                    $durasiTerlambatObj = $now->diff($jadwalMulaiToday); // Hitung selisih dari jam mulai seharusnya
-                    $durasiTerlambatFormatted = '';
-                    if ($durasiTerlambatObj->h > 0) {
-                        $durasiTerlambatFormatted .= $durasiTerlambatObj->format('%H jam ');
-                    }
-                    $durasiTerlambatFormatted .= $durasiTerlambatObj->format('%I menit');
-
-                    $message = 'Anda tercatat Hadir (Terlambat '.$durasiTerlambatFormatted.'). Absensi berhasil! Anda akan diarahkan...';
+            if ($statusInput === 'hadir') {
+                if ($now->isAfter($batasToleransiTidakTerlambat)) { // LEBIH DARI 15 menit setelah jam mulai
+                    $keteranganForDb = 'Terlambat';
+                    $durasiTerlambatObj = $now->diff($jadwalMulaiToday);
+                    $durasiTerlambatFormatted = ($durasiTerlambatObj->h > 0 ? $durasiTerlambatObj->format('%H jam ') : '') . $durasiTerlambatObj->format('%I menit');
+                    $messageForAlert = 'Anda tercatat Hadir (Terlambat '.$durasiTerlambatFormatted.'). Absensi berhasil!';
+                    $statusDetailForDisplayPage = "Datang Terlambat";
+                } elseif ($now->isAfter($jadwalMulaiToday) && $now->lte($batasToleransiTidakTerlambat)) { // Antara jam mulai s/d +15 menit
+                    // Tidak dianggap terlambat parah, tapi bisa diberi keterangan jika mau
+                    // $keteranganForDb = 'Terlambat (Toleransi)'; // Jika ingin tetap ada catatan di DB
+                    $messageForAlert = 'Absen Hadir (dalam toleransi waktu) berhasil dicatat!';
+                    $statusDetailForDisplayPage = "Datang Tepat Waktu"; // Atau "Datang Dalam Toleransi"
+                } else { // Tepat waktu atau sebelum jam mulai (dalam rentang -15 menit)
+                    $messageForAlert = 'Absen Hadir tepat waktu berhasil dicatat!';
+                    $statusDetailForDisplayPage = "Datang Tepat Waktu";
                 }
-                // Jika waktu saat ini SETELAH jam mulai kerja TAPI MASIH DALAM atau SAMA DENGAN batas toleransi 15 menit
-                elseif ($now->isAfter($jadwalMulaiToday) && $now->lte($batasToleransiTidakTerlambat)) {
-                    // Ini juga bisa dianggap terlambat, tapi mungkin tanpa sanksi atau dengan pesan berbeda
-                    // Sesuai permintaan "jika LEBIH dari ini baru terhitung terlambat", maka kondisi di atas yang utama.
-                    // Jika ingin kasus ini juga dicatat sebagai "Terlambat" namun dengan pesan berbeda, bisa ditambahkan.
-                    // Untuk saat ini, jika dalam 15 menit toleransi, dianggap "tepat waktu" (keterangan = null).
-                    // Jika ingin tetap dicatat terlambat tapi tanpa sanksi, set $keterangan = 'Terlambat (Toleransi)';
-                    $message = 'Absen Hadir (dalam toleransi) berhasil dicatat! Anda akan diarahkan...';
-                } else {
-                    // Hadir tepat waktu atau sebelum jam mulai (dalam rentang -15 menit dari jam mulai)
-                    $message = 'Absen Hadir tepat waktu berhasil dicatat! Anda akan diarahkan...';
-                }
-            } elseif (in_array($statusAbsen, ['sakit', 'izin'])) {
+            } elseif (in_array($statusInput, ['sakit', 'izin'])) {
                 if ($now->isAfter($jadwalMulaiToday)) {
                     return response()->json(['error' => true, 'message' => 'Anda hanya bisa memilih status Sakit atau Izin sebelum jam kerja dimulai (' . $jadwalMulaiToday->format('H:i') . ').'], 400);
                 }
+                $messageForAlert = 'Absen '.ucfirst($statusInput).' berhasil dicatat!';
+                $statusDetailForDisplayPage = ucfirst($statusInput);
             }
 
             $attendanceRecord = Attendance::create([
                 'user_id' => $user->id,
                 'check_in' => $now,
                 'date' => $today,
-                'status' => $statusAbsen,
-                'keterangan' => $keterangan,
+                'status' => $statusInput,
+                'keterangan' => $keteranganForDb,
                 'location_check_in' => $validatedData['latitude'] . ',' . $validatedData['longitude'],
                 'accuracy_check_in' => $validatedData['accuracy'] ?? null,
             ]);
 
         } elseif ($validatedData['jenis_absen'] === 'pulang') {
-            // ... (Logika absen pulang tetap sama) ...
             $batasAwalAbsenPulang = $jadwalSelesaiToday->copy();
-            $batasAkhirAbsenPulang = $jadwalSelesaiToday->copy()->addMinutes(15);
+            $batasAkhirAbsenPulang = $jadwalSelesaiToday->copy()->addMinutes(15); // Toleransi 15 menit untuk pulang
 
             if (!$now->between($batasAwalAbsenPulang, $batasAkhirAbsenPulang, true)) {
                  return response()->json(['error' => true, 'message' => 'Absen pulang hanya bisa dilakukan antara ' . $batasAwalAbsenPulang->format('H:i') . ' dan ' . $batasAkhirAbsenPulang->format('H:i') . '.'], 400);
@@ -141,32 +134,36 @@ class AttendanceController extends Controller
             }
 
             if (in_array($attendanceRecord->status, ['sakit', 'izin', 'alpha'])) {
-                 return response()->json(['error' => true, 'message' => 'Status absensi Anda hari ini adalah ' . ucfirst($attendanceRecord->status) . ', tidak dapat melakukan absen pulang.'], 400);
+                 return response()->json(['error' => true, 'message' => 'Status absensi Anda hari ini (' . ucfirst($attendanceRecord->status) . ') tidak memungkinkan untuk absen pulang.'], 400);
             }
 
             $attendanceRecord->update([
                 'check_out' => $now,
                 'location_check_out' => $validatedData['latitude'] . ',' . $validatedData['longitude'],
                 'accuracy_check_out' => $validatedData['accuracy'] ?? null,
+                // Anda bisa menambahkan logika untuk 'keterangan' pulang cepat di sini jika perlu
             ]);
-            $message = 'Absen pulang berhasil dicatat! Anda akan diarahkan...';
+            $messageForAlert = 'Absen pulang berhasil dicatat!';
+            $statusDetailForDisplayPage = "Pulang Tepat Waktu"; // Tambahkan logika cepat pulang jika perlu
         } else {
              return response()->json(['error' => true, 'message' => 'Jenis absen tidak valid.'], 400);
         }
 
         if ($attendanceRecord) {
-            $waktuAbsenYangDitampilkan = $validatedData['jenis_absen'] === 'hadir' ? $attendanceRecord->check_in : $attendanceRecord->check_out;
+            $waktuAbsenYangDitampilkan = ($validatedData['jenis_absen'] === 'hadir') ? $attendanceRecord->check_in : $attendanceRecord->check_out;
+
             return response()->json([
                 'success' => true,
-                'message' => $message,
+                'message' => $messageForAlert,
                 'attendance_details' => [
-                    'status_display' => $attendanceRecord->statusDisplayAttribute,
+                    'jenis_absen' => $validatedData['jenis_absen'],
+                    'status_detail_display' => $statusDetailForDisplayPage,
                     'time' => Carbon::parse($waktuAbsenYangDitampilkan)->format('H:i:s'),
                     'date' => Carbon::parse($attendanceRecord->date)->translatedFormat('d F Y'),
-                    'keterangan' => $attendanceRecord->keterangan ?? null
+                    // 'keterangan_db' => $attendanceRecord->keterangan // Jika JS perlu keterangan mentah dari DB
                 ]
             ]);
         }
-        return response()->json(['error' => true, 'message' => 'Gagal memproses detail absensi.'], 500);
+        return response()->json(['error' => true, 'message' => 'Gagal menyimpan atau memproses detail absensi.'], 500);
     }
 }

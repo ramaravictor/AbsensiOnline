@@ -62,6 +62,7 @@
 
 <body class="bg-gray-100">
     <div class="min-h-screen flex flex-col">
+        <!-- Header -->
         <nav class="bg-blue-700 flex items-center justify-between px-4 sm:px-6 py-3 shadow-md relative">
             <div>
                 <a href="{{ route('user.profil') }}"
@@ -125,9 +126,16 @@
 
             <div class="bg-white rounded-lg shadow-lg w-full max-w-5xl p-6 sm:p-10" style="min-height: 550px;">
                 <div class="flex flex-col sm:flex-row items-center sm:space-x-6 mb-8">
-                    <img alt="Avatar of {{ Auth::user()->name ?? 'User' }}" class="w-20 h-20 rounded-full mb-4 sm:mb-0"
-                        height="80" src="{{ Auth::user()->avatar_url ?? asset('images/default-avatar.png') }}"
-                        width="80" />
+                    @php
+                        $name = Auth::user()->name ?? 'User';
+                        $avatarUrl =
+                            'https://ui-avatars.com/api/?name=' .
+                            urlencode($name) .
+                            '&background=random&size=80&rounded=true';
+                    @endphp
+
+                    <img alt="Avatar of {{ $name }}" class="w-20 h-20 rounded-full mb-4 sm:mb-0" height="80"
+                        width="80" src="{{ Auth::user()->avatar_url ?? $avatarUrl }}" />
                     <div>
                         <div class="text-lg font-semibold text-gray-700 text-center sm:text-left">
                             {{ Auth::user()->name ?? 'Nama Pengguna' }}</div>
@@ -143,7 +151,6 @@
                     </div>
                 </div>
 
-                {{-- Filter Bulan dan Tahun --}}
                 <div class="mb-6 p-4 bg-gray-50 rounded-lg shadow">
                     <form method="GET" action="{{ route('user.home') }}"
                         class="flex flex-col sm:flex-row sm:items-end sm:space-x-3 space-y-3 sm:space-y-0">
@@ -177,10 +184,7 @@
                         </button>
                     </form>
                 </div>
-                {{-- Akhir Filter Bulan dan Tahun --}}
 
-
-                {{-- REKAP ABSENSI DINAMIS --}}
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 md:gap-8 text-center mb-8">
                     <div class="bg-gray-50 rounded-lg shadow-md p-4 md:p-6">
                         <div class="text-green-600 font-bold text-2xl md:text-3xl">{{ $rekapHadir ?? 0 }}</div>
@@ -204,8 +208,6 @@
                         <div class="text-sm text-gray-500 mt-1">Alpha</div>
                     </div>
                 </div>
-                {{-- AKHIR REKAP ABSENSI DINAMIS --}}
-
 
                 <div id="mapRealtime" class="mb-8 rounded overflow-hidden border border-gray-300 relative"
                     style="height: 300px; sm:height: 350px; width: 100%;">
@@ -217,7 +219,6 @@
                         00:00:00
                     </div>
                     <div class="font-sans text-sm text-gray-600 mt-1" id="currentDate">
-                        {{-- Tanggal akan ditampilkan di sini --}}
                     </div>
                 </div>
 
@@ -237,10 +238,6 @@
         </main>
     </div>
 
-    {{-- Modal dan JavaScript lainnya tetap sama seperti di Canvas home_blade_full_code_01 sebelumnya --}}
-    {{-- ... (Welcome Popup) ... --}}
-    {{-- ... (Absen Modal) ... --}}
-    {{-- ... (Blok <script> lengkap) ... --}}
     <div id="welcomePopup" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden"
         role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" style="z-index: 1050;">
         <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative mx-4">
@@ -251,9 +248,17 @@
             </button>
             <h2 class="text-lg font-semibold mb-4 text-center" id="welcomeTitle">Selamat Datang!</h2>
             <div class="flex items-center space-x-4 mb-4">
-                <img alt="Profile image of {{ Auth::user()->name ?? 'User' }}"
-                    class="w-20 h-20 rounded-full flex-shrink-0" height="80"
-                    src="{{ Auth::user()->avatar_url ?? asset('images/default-avatar.png') }}" width="80" />
+                @php
+                    $name = Auth::user()->name ?? 'User';
+                    $avatarUrl =
+                        'https://ui-avatars.com/api/?name=' .
+                        urlencode($name) .
+                        '&background=random&size=80&rounded=true';
+                @endphp
+
+                <img alt="Avatar of {{ $name }}" class="w-20 h-20 rounded-full mb-4 sm:mb-0" height="80"
+                    width="80" src="{{ Auth::user()->avatar_url ?? $avatarUrl }}" />
+
                 <div class="text-xs leading-tight">
                     <p class="font-bold text-[13px]">{{ Auth::user()->name ?? 'Nama Pengguna' }}</p>
                     <p class="text-[10px]">NIP: {{ Auth::user()->nip ?? 'NIP Pengguna' }}</p>
@@ -303,7 +308,7 @@
                         onclick="selectOption(this)" type="button">Izin</button>
                 </div>
                 <div class="space-y-3 hidden" id="absenPulangOptions" aria-label="Pilihan absen pulang">
-                    <button aria-pressed="false" data-value="Pulang"
+                    <button aria-pressed="false" data-value="Pulang Tepat Waktu" {{-- Nilai data-value disesuaikan agar unik jika perlu --}}
                         class="w-full bg-gray-200 text-gray-700 rounded-lg px-3 py-3 font-semibold text-center shadow hover:bg-green-600 hover:text-white hover:shadow-lg hover:scale-105 transform transition-all"
                         onclick="selectOption(this)" type="button">Pulang Tepat Waktu</button>
                 </div>
@@ -324,12 +329,10 @@
     </div>
 
     <script>
-        // --- Variabel Global untuk Peta ---
         let mapInstance;
         let currentLocationMarker;
         let accuracyCircle;
 
-        // --- Fungsi-fungsi UI Modal & Jam ---
         function closeWelcomePopup() {
             const el = document.getElementById("welcomePopup");
             if (el) el.classList.add("hidden");
@@ -349,22 +352,17 @@
         function resetModal() {
             const absenTypeEl = document.getElementById("absenType");
             if (absenTypeEl) absenTypeEl.value = "";
-
             const hadirOptionsEl = document.getElementById("absenHadirOptions");
             if (hadirOptionsEl) hadirOptionsEl.classList.add("hidden");
-
             const pulangOptionsEl = document.getElementById("absenPulangOptions");
             if (pulangOptionsEl) pulangOptionsEl.classList.add("hidden");
-
             clearSelection();
             const actionButtonsEl = document.getElementById("actionButtons");
             if (actionButtonsEl) actionButtonsEl.classList.add("hidden");
         }
 
         function clearSelection() {
-            const buttons = document.querySelectorAll(
-                "#absenHadirOptions button, #absenPulangOptions button"
-            );
+            const buttons = document.querySelectorAll("#absenHadirOptions button, #absenPulangOptions button");
             buttons.forEach((btn) => {
                 btn.classList.remove("bg-green-600", "text-white", "shadow-lg", "scale-105", "bg-blue-600",
                     "bg-yellow-500");
@@ -379,11 +377,9 @@
             clearSelection();
             const actionButtonsEl = document.getElementById("actionButtons");
             if (actionButtonsEl) actionButtonsEl.classList.add("hidden");
-
             const val = document.getElementById("absenType").value;
             const hadirOptionsEl = document.getElementById("absenHadirOptions");
             const pulangOptionsEl = document.getElementById("absenPulangOptions");
-
             if (val === "hadir") {
                 if (hadirOptionsEl) hadirOptionsEl.classList.remove("hidden");
                 if (pulangOptionsEl) pulangOptionsEl.classList.add("hidden");
@@ -406,10 +402,9 @@
                 btn.classList.add("bg-gray-200", "text-gray-700", "shadow-none", "scale-100");
                 btn.setAttribute("aria-pressed", "false");
             });
-
             button.classList.remove("bg-gray-200", "text-gray-700", "shadow-none", "scale-100");
             const buttonValue = button.dataset.value;
-            if (buttonValue === "Hadir" || buttonValue === "Pulang") {
+            if (buttonValue === "Hadir" || buttonValue === "Pulang Tepat Waktu") { // Sesuaikan dengan data-value
                 button.classList.add("bg-green-600", "text-white");
             } else if (buttonValue === "Sakit") {
                 button.classList.add("bg-blue-600", "text-white");
@@ -418,22 +413,18 @@
             }
             button.classList.add("shadow-lg", "scale-105");
             button.setAttribute("aria-pressed", "true");
-
             const actionButtonsEl = document.getElementById("actionButtons");
             if (actionButtonsEl) actionButtonsEl.classList.remove("hidden");
-
             const selectedOptionInput = document.getElementById('selectedOptionInput');
             if (selectedOptionInput) selectedOptionInput.value = button.dataset.value || button.textContent.trim();
         }
 
         function updateTime() {
             const now = new Date();
-
             const hours = now.getHours().toString().padStart(2, "0");
             const minutes = now.getMinutes().toString().padStart(2, "0");
             const seconds = now.getSeconds().toString().padStart(2, "0");
             const timeString = `${hours}:${minutes}:${seconds}`;
-
             const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
             const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September',
                 'Oktober', 'November', 'Desember'
@@ -443,32 +434,23 @@
             const monthName = months[now.getMonth()];
             const year = now.getFullYear();
             const dateString = `${dayName}, ${dayOfMonth} ${monthName} ${year}`;
-
             const timeElement = document.getElementById("currentTime");
-            if (timeElement) {
-                timeElement.textContent = timeString;
-            }
-
+            if (timeElement) timeElement.textContent = timeString;
             const dateElement = document.getElementById("currentDate");
-            if (dateElement) {
-                dateElement.textContent = dateString;
-            }
+            if (dateElement) dateElement.textContent = dateString;
         }
 
-        // --- Fungsi untuk Peta Leaflet ---
         function initializeLeafletMap() {
             const mapElement = document.getElementById('mapRealtime');
-            if (mapElement) {
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(showPositionOnMap, showErrorInitializingMap, {
-                        enableHighAccuracy: true,
-                        timeout: 10000,
-                        maximumAge: 0
-                    });
-                } else {
-                    mapElement.innerHTML =
-                        "<p class='text-center text-red-500 p-4'>Geolocation tidak didukung oleh browser Anda.</p>";
-                }
+            if (mapElement && navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(showPositionOnMap, showErrorInitializingMap, {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                });
+            } else if (mapElement) {
+                mapElement.innerHTML =
+                    "<p class='text-center text-red-500 p-4'>Geolocation tidak didukung oleh browser Anda.</p>";
             }
         }
 
@@ -477,9 +459,7 @@
             const lon = position.coords.longitude;
             const acc = position.coords.accuracy;
             const mapElement = document.getElementById('mapRealtime');
-
             if (mapElement) mapElement.innerHTML = '';
-
             if (!mapInstance) {
                 mapInstance = L.map('mapRealtime').setView([lat, lon], 16);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -488,13 +468,10 @@
             } else {
                 mapInstance.setView([lat, lon], 16);
             }
-
             if (currentLocationMarker) mapInstance.removeLayer(currentLocationMarker);
             if (accuracyCircle) mapInstance.removeLayer(accuracyCircle);
-
             currentLocationMarker = L.marker([lat, lon]).addTo(mapInstance)
-                .bindPopup(`<b>Lokasi Anda Saat Ini</b><br>Akurasi: ${acc.toFixed(0)} meter`)
-                .openPopup();
+                .bindPopup(`<b>Lokasi Anda Saat Ini</b><br>Akurasi: ${acc.toFixed(0)} meter`).openPopup();
             accuracyCircle = L.circle([lat, lon], {
                 radius: acc
             }).addTo(mapInstance);
@@ -521,30 +498,23 @@
             console.error("Error Geolocation Map: ", error);
         }
 
-        // --- Fungsi untuk Submit Data Absensi (AJAX) ---
         function submitAttendanceData() {
             const jenisAbsenEl = document.getElementById("absenType");
             const jenisAbsen = jenisAbsenEl ? jenisAbsenEl.value : null;
-
             const selectedOptionInputEl = document.getElementById('selectedOptionInput');
             let selectedOption = selectedOptionInputEl ? selectedOptionInputEl.value : null;
-
             let isValid = true;
 
             if (!jenisAbsen) {
                 isValid = false;
                 alert("Silakan pilih jenis absen (Hadir atau Pulang).");
-            } else if (jenisAbsen === "hadir" && !selectedOption) { // Tetap validasi untuk hadir
+            } else if (jenisAbsen === "hadir" && !selectedOption) {
                 isValid = false;
                 alert("Silakan pilih status kehadiran (Hadir, Sakit, atau Izin).");
-            } else if (jenisAbsen === "pulang" && !selectedOption) { // Validasi untuk pulang jika Anda mewajibkan pilihan
-                // Jika Anda selalu memiliki minimal satu opsi untuk "pulang" seperti "Pulang Tepat Waktu"
-                // dan itu wajib dipilih, maka validasi ini tetap relevan.
-                // Jika tidak ada sub-pilihan wajib untuk pulang, Anda bisa menghapus blok 'else if' ini.
+            } else if (jenisAbsen === "pulang" && !selectedOption) {
                 isValid = false;
                 alert("Silakan pilih opsi untuk absen pulang.");
             }
-
             if (!isValid) return;
 
             const continueBtn = document.getElementById('continueBtn');
@@ -553,21 +523,18 @@
                     continueBtn.disabled = true;
                     continueBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Memproses...';
                 }
-
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
                         document.getElementById('latitudeInput').value = position.coords.latitude;
                         document.getElementById('longitudeInput').value = position.coords.longitude;
                         document.getElementById('accuracyInput').value = position.coords.accuracy;
-
                         const form = document.getElementById('formAbsensi');
                         const formData = new FormData(form);
-
                         fetch("{{ route('user.attendance.store') }}", {
                                 method: "POST",
                                 headers: {
                                     "X-CSRF-TOKEN": formData.get('_token'),
-                                    "Accept": "application/json",
+                                    "Accept": "application/json"
                                 },
                                 body: formData
                             })
@@ -575,69 +542,55 @@
                                 const isJson = response.headers.get('content-type')?.includes(
                                     'application/json');
                                 const responseBody = isJson ? await response.json() : await response.text();
-
                                 if (!response.ok) {
                                     let errorData = {
                                         message: "Terjadi kesalahan pada server.",
                                         errors: {},
                                         status: response.status
                                     };
-                                    if (isJson && typeof responseBody === 'object') {
-                                        errorData = {
-                                            ...errorData,
-                                            ...responseBody
-                                        };
-                                    } else if (typeof responseBody === 'string') {
-                                        errorData.message = responseBody;
-                                    }
+                                    if (isJson && typeof responseBody === 'object') errorData = {
+                                        ...errorData,
+                                        ...responseBody
+                                    };
+                                    else if (typeof responseBody === 'string') errorData.message = responseBody;
                                     throw errorData;
                                 }
                                 return responseBody;
                             })
                             .then(data => {
-                                console.log("Success data from server:", data); // Untuk debugging
-                                let successMessage = "Operasi berhasil!";
-                                if (typeof data === 'object' && data.message) {
-                                    successMessage = data.message;
-                                } else if (typeof data === 'object' && data.success) {
-                                    successMessage = "Absensi berhasil diproses!";
-                                } else if (typeof data === 'string') {
-                                    successMessage = data;
-                                }
-                                alert(successMessage);
-
-                                // Simpan detail absensi ke localStorage untuk ditampilkan di halaman berikutnya
-                                if (data.attendance_details) { // PASTIKAN INI ADA
-                                    localStorage.setItem('attendance_status', data.attendance_details
-                                        .status_display);
-                                    localStorage.setItem('attendance_time', data.attendance_details.time);
-                                    localStorage.setItem('attendance_date', data.attendance_details.date);
-                                    localStorage.setItem('attendance_keterangan', data.attendance_details
-                                        .keterangan || ''); // Ambil keterangan
+                                console.log("Success data from server:", data);
+                                let alertMessageForHome = "Operasi berhasil!";
+                                if (typeof data === 'object' && data.message) alertMessageForHome = data.message;
+                                else if (typeof data === 'object' && data.success) alertMessageForHome =
+                                    "Absensi berhasil diproses!";
+                                else if (typeof data === 'string') alertMessageForHome = data;
+                                alert(alertMessageForHome);
+                                if (data.attendance_details) {
+                                    localStorage.setItem('processed_jenis_absen', data.attendance_details
+                                        .jenis_absen);
+                                    localStorage.setItem('processed_status_detail', data.attendance_details
+                                        .status_detail_display);
+                                    localStorage.setItem('processed_time', data.attendance_details.time);
+                                    localStorage.setItem('processed_date', data.attendance_details.date);
+                                    localStorage.setItem('alert_message_from_home', alertMessageForHome);
                                 } else {
-                                    console.error("attendance_details tidak ditemukan dalam respons server:", data);
-                                    // Set fallback agar halaman absen tidak kosong total
-                                    localStorage.setItem('attendance_status', 'Status tidak diterima dari server');
-                                    localStorage.setItem('attendance_time', '--:--:--');
-                                    localStorage.setItem('attendance_date', 'Tanggal tidak diterima');
-                                    localStorage.setItem('attendance_keterangan', '');
+                                    localStorage.setItem('processed_status_detail',
+                                        'Status tidak diterima dari server');
+                                    localStorage.setItem('processed_time', '--:--:--');
+                                    localStorage.setItem('processed_date', 'Tanggal tidak diterima');
+                                    localStorage.setItem('alert_message_from_home', alertMessageForHome);
                                 }
-
-                                window.location.href = "{{ route('user.absen') }}"; // Redirect ke halaman absen
+                                window.location.href = "{{ route('user.absen') }}";
                             })
                             .catch(error => {
                                 console.error("Error processing attendance:", error);
                                 let errorMessage = "Terjadi kesalahan saat mengirim data absensi.";
                                 if (error.status === 422 && error.errors) {
                                     errorMessage = "Kesalahan Validasi:\n";
-                                    for (const key in error.errors) {
-                                        errorMessage += `- ${error.errors[key].join(', ')}\n`;
-                                    }
-                                } else if (error.message) {
-                                    errorMessage = error.message;
-                                } else if (typeof error === 'string') {
-                                    errorMessage = error;
-                                }
+                                    for (const key in error.errors) errorMessage +=
+                                        `- ${error.errors[key].join(', ')}\n`;
+                                } else if (error.message) errorMessage = error.message;
+                                else if (typeof error === 'string') errorMessage = error;
                                 alert(errorMessage);
                             })
                             .finally(() => {
@@ -681,11 +634,9 @@
             }
         }
 
-        // --- Event Listener Utama ---
         window.addEventListener("DOMContentLoaded", () => {
             const welcomePopupEl = document.getElementById("welcomePopup");
             if (welcomePopupEl) welcomePopupEl.classList.remove("hidden");
-
             const userBtn = document.getElementById("userBtn");
             const userDropdown = document.getElementById("userDropdown");
             if (userBtn && userDropdown) {
@@ -700,17 +651,14 @@
                     }
                 });
             }
-
             const continueBtnModal = document.getElementById("continueBtn");
             if (continueBtnModal) {
                 const newContinueBtn = continueBtnModal.cloneNode(true);
                 continueBtnModal.parentNode.replaceChild(newContinueBtn, continueBtnModal);
                 newContinueBtn.addEventListener("click", submitAttendanceData);
             }
-
             updateTime();
             setInterval(updateTime, 1000);
-
             initializeLeafletMap();
         });
     </script>

@@ -55,14 +55,21 @@
         <section class="w-full max-w-3xl rounded-lg shadow-md border border-gray-200 overflow-hidden">
             <!-- Green header -->
             <div class="bg-[#0D8B2E] p-8 rounded-t-lg flex flex-col items-center">
-                <img alt="Profile image of a man in brown uniform with hat and badge"
-                    class="w-28 h-28 rounded-full object-cover mb-4" height="112"
-                    src="https://storage.googleapis.com/a1aa/image/b2c63f9c-8af4-45aa-a60f-aa9ba1aba9ff.jpg"
-                    width="112" />
-                <p class="text-white text-center text-lg font-normal leading-tight">
+                @php
+                    $name = Auth::user()->name ?? 'User';
+                    $avatarUrl =
+                        'https://ui-avatars.com/api/?name=' .
+                        urlencode($name) .
+                        '&background=random&size=80&rounded=true';
+                @endphp
+
+                <img alt="Avatar of {{ $name }}" class="w-20 h-20 rounded-full mb-4 sm:mb-0" height="80"
+                    width="80" src="{{ Auth::user()->avatar_url ?? $avatarUrl }}" />
+
+                <p class="text-white text-center text-lg mt-5 font-normal leading-tight">
                     {{ Auth::user()->name }}
                 </p>
-                <p class="text-white text-[10px] font-normal leading-tight tracking-widest mt-1">
+                <p class="text-white text-[10px] font-normal leading-tight tracking-widest mt-3">
                     {{ Auth::user()->nip }}
                 </p>
                 <p
