@@ -10,17 +10,25 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+
 
     /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
+     * Konstanta untuk nama peran.
+     * Ini membantu menghindari kesalahan ketik dan membuat kode lebih mudah dibaca.
      */
+    public const ROLE_ADMIN = 'admin';
+    public const ROLE_EMPLOYEE = 'employee'; // Anda juga bisa menambahkan ini
+
+
     protected $fillable = [
         'name',
+        'nip',
         'email',
         'password',
+        'jadwal_kerja_mulai',
+        'jadwal_kerja_selesai',
+        'role', // Pastikan 'role' ada di sini
+        'last_login_at', // Jika Anda sudah menambahkannya
     ];
 
     /**
@@ -41,5 +49,28 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'last_login_at' => 'datetime', // Jika Anda sudah menambahkannya
     ];
+
+    /**
+     * Helper method untuk mengecek apakah pengguna adalah admin.
+     *
+     * @return bool
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === self::ROLE_ADMIN;
+    }
+
+    /**
+     * Helper method untuk mengecek apakah pengguna adalah employee (opsional).
+     *
+     * @return bool
+     */
+    public function isEmployee(): bool
+    {
+        return $this->role === self::ROLE_EMPLOYEE;
+    }
+
+    // ... (relasi atau method lain jika ada) ...
 }

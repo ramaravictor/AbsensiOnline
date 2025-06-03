@@ -27,10 +27,12 @@
                 <a class="opacity-100 border-l-2 border-white pl-2 text-[15px]" href="/admin/dashboard">
                     Dashboard
                 </a>
-                <a class="opacity-50 hover:opacity-100 transition-opacity duration-300 text-[14px]" href="/admin/rekap-absensi">
+                <a class="opacity-50 hover:opacity-100 transition-opacity duration-300 text-[14px]"
+                    href="/admin/rekap-absensi">
                     Rekap Absensi
                 </a>
-                <a class="opacity-50 hover:opacity-100 transition-opacity duration-300 text-[14px]" href="/admin/karyawan">
+                <a class="opacity-50 hover:opacity-100 transition-opacity duration-300 text-[14px]"
+                    href="/admin/karyawan">
                     Data Karyawan
                 </a>
             </nav>
@@ -39,7 +41,7 @@
             class="absolute bottom-6 bg-gray-300 rounded-lg px-4 py-2 text-center w-28"
             style="font-size: 12px; font-weight: 700;">
             <p class="font-bold">
-                Munir
+                {{ Auth::user()->name }}
             </p>
             <p class="text-xs font-normal">
                 Admin

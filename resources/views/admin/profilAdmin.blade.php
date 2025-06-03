@@ -24,13 +24,16 @@
                 src="https://storage.googleapis.com/a1aa/image/b8a2577d-6f49-43cc-628e-7137d15ec12a.jpg"
                 width="60" />
             <nav class="flex flex-col space-y-6 text-white text-sm font-semibold">
-                <a class="opacity-50 hover:opacity-100 transition-opacity duration-300 text-[14px]" href="/admin/dashboard">
+                <a class="opacity-50 hover:opacity-100 transition-opacity duration-300 text-[14px]"
+                    href="/admin/dashboard">
                     Dashboard
                 </a>
-                <a class="opacity-50 hover:opacity-100 transition-opacity duration-300 text-[14px]" href="/admin/rekap-absensi">
+                <a class="opacity-50 hover:opacity-100 transition-opacity duration-300 text-[14px]"
+                    href="/admin/rekap-absensi">
                     Rekap Absensi
                 </a>
-                <a class="opacity-50 hover:opacity-100 transition-opacity duration-300 text-[14px]" href="/admin/karyawan">
+                <a class="opacity-50 hover:opacity-100 transition-opacity duration-300 text-[14px]"
+                    href="/admin/karyawan">
                     Data Karyawan
                 </a>
             </nav>
@@ -39,7 +42,7 @@
             class="absolute bottom-6 bg-gray-300 rounded-lg px-4 py-2 text-center w-28"
             style="font-size: 12px; font-weight: 700;">
             <p class="font-bold">
-                Munir
+                {{ Auth::user()->name }}
             </p>
             <p class="text-xs font-normal">
                 Admin
@@ -55,13 +58,13 @@
                 src="https://storage.googleapis.com/a1aa/image/de7019d2-d27f-4958-7ab5-abc19d228791.jpg"
                 width="80" />
             <h2 class="text-white font-semibold text-lg leading-tight">
-                Prof. Dimas, M.Kom
+                {{ Auth::user()->name }}
             </h2>
             <p class="text-[#A7C9A7] text-[9px] mt-1 leading-tight">
-                19740516 199705 1 001
+                {{ Auth::user()->nip }}
             </p>
             <p class="text-[#A7C9A7] text-[9px] mt-1 text-center leading-tight max-w-[280px]">
-                Kepala Bidang Dinas Lingkungan hidup kab. Bantul
+                {{ Auth::user()->jabatan }}
             </p>
         </section>
         <section class="bg-[#E6E6E6] rounded-b-lg p-4 mt-0">
@@ -96,11 +99,15 @@
             </div>
         </section>
     </main>
-    <!-- Floating button bottom right -->
-    <button aria-label="Logout" onclick="window.location.href='{{ url('/admin/login') }}'"
-        class="fixed bottom-8 right-8 bg-white border-2 border-red-600 text-red-600 rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-red-600 hover:text-white transition">
-        <i class="fas fa-sign-out-alt fa-lg"></i>
-    </button>
+    <!-- Floating button bottom right LOGOUT ADMIN -->
+    <form method="POST" action="{{ route('logout') }}" class="fixed bottom-8 right-8"
+        onsubmit="return confirm('Apakah Anda yakin ingin logout?');">
+        @csrf
+        <button type="submit" aria-label="Logout"
+            class="bg-white border-2 border-red-600 text-red-600 rounded-full w-12 h-12 flex items-center justify-center shadow-lg hover:bg-red-600 hover:text-white transition focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50">
+            <i class="fas fa-sign-out-alt fa-lg"></i>
+        </button>
+    </form>
 </body>
 
 </html>
