@@ -3,18 +3,22 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Auth; // Pastikan ini di-import
 use App\Models\Attendance;
-use App\Models\User;
+use App\Models\User; // Pastikan User model di-import
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Log; // Untuk debugging jika diperlukan
 
 class UserController extends Controller
 {
     public function home(Request $request)
     {
+        if (!Auth::check()) { // Pengecekan autentikasi
+            return redirect()->route('login');
+        }
         $user = Auth::user();
+
         $appTimezone = config('app.timezone');
         $now = Carbon::now($appTimezone);
 
@@ -30,7 +34,7 @@ class UserController extends Controller
         }
 
         $loginTime = null;
-        $attendanceToday = Attendance::where('user_id', $user->id)
+        $attendanceToday = Attendance::where('user_id', $user->id) // $user di sini sudah pasti tidak null
                             ->whereDate('date', $now->toDateString())
                             ->orderBy('check_in', 'asc')
                             ->first();
@@ -42,15 +46,15 @@ class UserController extends Controller
         $startOfMonth = $currentFilterDate->copy()->startOfMonth();
         $endOfMonth = $currentFilterDate->copy()->endOfMonth();
 
-        $attendancesSelectedMonth = Attendance::where('user_id', $user->id)
+        $attendancesThisMonth = Attendance::where('user_id', $user->id)
                                     ->whereBetween('date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
                                     ->get();
 
-        $rekapHadir = $attendancesSelectedMonth->where('status', 'hadir')->count();
-        $rekapSakit = $attendancesSelectedMonth->where('status', 'sakit')->count();
-        $rekapIzin = $attendancesSelectedMonth->where('status', 'izin')->count();
+        $rekapHadir = $attendancesThisMonth->where('status', 'hadir')->count();
+        $rekapSakit = $attendancesThisMonth->where('status', 'sakit')->count();
+        $rekapIzin = $attendancesThisMonth->where('status', 'izin')->count();
 
-        $rekapTerlambat = $attendancesSelectedMonth->where('status', 'hadir')
+        $rekapTerlambat = $attendancesThisMonth->where('status', 'hadir')
                                              ->where('keterangan', 'Terlambat')
                                              ->count();
 
@@ -61,7 +65,7 @@ class UserController extends Controller
             $period = CarbonPeriod::create($startOfMonth, $endDateForAlphaCheck);
             foreach ($period as $date) {
                 if ($date->isWeekday()) {
-                    $hasAttendanceRecord = $attendancesSelectedMonth->contains(function ($attendance) use ($date) {
+                    $hasAttendanceRecord = $attendancesThisMonth->contains(function ($attendance) use ($date) {
                         return Carbon::parse($attendance->date)->isSameDay($date) &&
                                in_array(strtolower($attendance->status), ['hadir', 'sakit', 'izin']);
                     });
@@ -104,7 +108,11 @@ class UserController extends Controller
 
     public function profil(Request $request)
     {
+        if (!Auth::check()) { // Pengecekan autentikasi
+            return redirect()->route('login');
+        }
         $user = Auth::user();
+
         $appTimezone = config('app.timezone');
         $now = Carbon::now($appTimezone);
 
@@ -187,7 +195,11 @@ class UserController extends Controller
 
     public function history(Request $request)
     {
+        if (!Auth::check()) { // Pengecekan autentikasi
+            return redirect()->route('login');
+        }
         $user = Auth::user();
+
         $appTimezone = config('app.timezone');
         $now = Carbon::now($appTimezone);
 
@@ -237,16 +249,19 @@ class UserController extends Controller
 
     public function showAbsenPage()
     {
-        $user = Auth::user();
-        $today = Carbon::now(config('app.timezone'))->toDateString();
-        $absensiHariIni = Attendance::where('user_id', $user->id)
-                                ->where('date', $today)
-                                ->first();
-        // Logika untuk halaman /user/absen tidak memerlukan data rekap,
-        // hanya menampilkan status dari localStorage yang di-set oleh halaman home.
-        return view('user.absen'); // Tidak perlu compact('absensiHariIni') jika JS menangani dari localStorage
+        if (!Auth::check()) { // Pengecekan autentikasi
+            return redirect()->route('login');
+        }
+        // $user = Auth::user(); // Tidak perlu mengambil $user jika view hanya dari localStorage
+        // $today = Carbon::now(config('app.timezone'))->toDateString();
+        // $absensiHariIni = Attendance::where('user_id', $user->id)
+        //                         ->where('date', $today)
+        //                         ->first();
+        // return view('user.absen', compact('absensiHariIni')); // Tidak perlu compact jika JS menangani
+        return view('user.absen');
     }
 
+    // Method login() ini menampilkan view login, jadi tidak perlu Auth::check()
     public function login()
     {
         return view('auth.login');

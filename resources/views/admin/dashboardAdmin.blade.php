@@ -56,9 +56,15 @@
 
     <!-- Main content -->
     <main class="flex-1 p-6 sm:p-8 overflow-y-auto">
-        <h1 class="text-gray-800 font-bold text-2xl mb-8">
-            Dashboard Admin
-        </h1>
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-gray-800 font-bold text-2xl">
+                Dashboard Admin
+            </h1>
+            <a href="{{ url('/user/home') }}" {{-- Mengarah ke root URL (landing page/login pengguna) --}}
+                class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition-colors text-sm flex items-center">
+                <i class="fas fa-home mr-2"></i>Kunjungi Halaman Utama
+            </a>
+        </div>
         <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {{-- Card Total Karyawan --}}
             <div class="bg-white rounded-lg shadow-lg p-6 flex items-center justify-between">
