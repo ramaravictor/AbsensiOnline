@@ -51,12 +51,12 @@ class AttendanceController extends Controller
         $keteranganForDb = null; // Keterangan yang akan disimpan ke DB ('Terlambat', dll)
 
         if ($validatedData['jenis_absen'] === 'hadir') {
-            $batasAwalAbsenHadir = $jadwalMulaiToday->copy()->subMinutes(15);
+            $batasAwalAbsenHadir = $jadwalMulaiToday->copy()->subMinutes(60);
             // Batas akhir pengguna BISA melakukan check-in hadir (meskipun akan ditandai sangat terlambat)
             $batasMaksimalCheckIn = $jadwalMulaiToday->copy()->addMinutes(60); // Contoh: Boleh absen hingga 60 menit terlambat
 
             // Batas waktu untuk dianggap TIDAK TERLAMBAT (toleransi)
-            $batasToleransiTidakTerlambat = $jadwalMulaiToday->copy()->addMinutes(15);
+            $batasToleransiTidakTerlambat = $jadwalMulaiToday->copy()->addMinutes(60);
 
             $existingAttendance = Attendance::where('user_id', $user->id)
                                         ->whereDate('date', $today)
@@ -117,7 +117,7 @@ class AttendanceController extends Controller
 
         } elseif ($validatedData['jenis_absen'] === 'pulang') {
             $batasAwalAbsenPulang = $jadwalSelesaiToday->copy();
-            $batasAkhirAbsenPulang = $jadwalSelesaiToday->copy()->addMinutes(15); // Toleransi 15 menit untuk pulang
+            $batasAkhirAbsenPulang = $jadwalSelesaiToday->copy()->addMinutes(60); // Toleransi 60 menit untuk pulang
 
             if (!$now->between($batasAwalAbsenPulang, $batasAkhirAbsenPulang, true)) {
                  return response()->json(['error' => true, 'message' => 'Absen pulang hanya bisa dilakukan antara ' . $batasAwalAbsenPulang->format('H:i') . ' dan ' . $batasAkhirAbsenPulang->format('H:i') . '.'], 400);

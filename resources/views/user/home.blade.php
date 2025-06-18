@@ -480,20 +480,25 @@
         function showErrorInitializingMap(error) {
             const mapElement = document.getElementById('mapRealtime');
             let message = "Gagal memuat peta: ";
-            switch (error.code) {
-                case error.PERMISSION_DENIED:
-                    message += "Izin lokasi ditolak.";
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    message += "Informasi lokasi tidak tersedia.";
-                    break;
-                case error.TIMEOUT:
-                    message += "Permintaan lokasi timed out.";
-                    break;
-                default:
-                    message += "Kesalahan tidak diketahui.";
-                    break;
+
+            // TAMBAHKAN PENGECEKAN INI
+            if (error.code === error.PERMISSION_DENIED) {
+                message =
+                    "Izin lokasi ditolak. Pastikan Anda mengakses situs melalui HTTPS dan izinkan akses lokasi untuk Safari di Pengaturan iPhone Anda.";
+            } else {
+                switch (error.code) {
+                    case error.POSITION_UNAVAILABLE:
+                        message += "Informasi lokasi tidak tersedia.";
+                        break;
+                    case error.TIMEOUT:
+                        message += "Permintaan lokasi timed out.";
+                        break;
+                    default:
+                        message += "Kesalahan tidak diketahui.";
+                        break;
+                }
             }
+
             if (mapElement) mapElement.innerHTML = `<p class='text-center text-red-500 p-4'>${message}</p>`;
             console.error("Error Geolocation Map: ", error);
         }

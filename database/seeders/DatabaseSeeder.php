@@ -22,8 +22,8 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('password'), // Ganti dengan password aman
             'role' => User::ROLE_ADMIN,
             'jabatan' => 'Administrator Sistem', // Contoh Jabatan Admin
-            'jadwal_kerja_mulai' => '08:00:00', // Contoh Jadwal Admin
-            'jadwal_kerja_selesai' => '17:00:00', // Contoh Jadwal Admin
+            'jadwal_kerja_mulai' => '07:00:00', // Contoh Jadwal Admin
+            'jadwal_kerja_selesai' => '16:00:00', // Contoh Jadwal Admin
             'email_verified_at' => now(),
         ]);
 
@@ -34,8 +34,8 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('password'), // Ganti dengan password aman
             'role' => User::ROLE_EMPLOYEE,
             'jabatan' => 'Staf IT', // Contoh Jabatan Karyawan
-            'jadwal_kerja_mulai' => '09:00:00', // Contoh Jadwal Karyawan
-            'jadwal_kerja_selesai' => '17:30:00', // Contoh Jadwal Karyawan
+            'jadwal_kerja_mulai' => '07:00:00', // Contoh Jadwal Karyawan
+            'jadwal_kerja_selesai' => '16:00:00', // Contoh Jadwal Karyawan
             'email_verified_at' => now(),
         ]);
 
@@ -46,8 +46,8 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('password'), // Ganti dengan password aman
             'role' => User::ROLE_EMPLOYEE,
             'jabatan' => 'Staf Administrasi', // Contoh Jabatan Karyawan lain
-            'jadwal_kerja_mulai' => '08:30:00',
-            'jadwal_kerja_selesai' => '17:00:00',
+            'jadwal_kerja_mulai' => '07:00:00',
+            'jadwal_kerja_selesai' => '16:00:00',
             'email_verified_at' => now(),
         ]);
     }

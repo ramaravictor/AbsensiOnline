@@ -21,6 +21,10 @@ return [
         'scheme' => 'https',
     ],
 
+    'google' => [
+        'maps_api_key' => env('Maps_API_KEY'),
+    ],
+
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],
